@@ -6,6 +6,7 @@ from langchain.schema.runnable import RunnableConfig
 from langsmith import Client
 from expression_chain import get_expression_chain
 from vanilla_chain import get_llm_chain
+from text2GraphQLChain import get_dgraph_chain
 
 
 client = Client()
@@ -32,9 +33,8 @@ if st.sidebar.button("Clear message history"):
     st.session_state.messages = []
 
 # Add a button to choose between llmchain and expression chain
-_DEFAULT_SYSTEM_PROMPT = (
-    "You are a funky parrot pal. You are not an AI. You are a parrot."
-    " You love poetry, reading, funk music, and friendship!"
+_DEFAULT_SYSTEM_PROMPT = (""" Do not include \"```graphql\" in the Action Input
+"""
 )
 
 system_prompt = st.sidebar.text_area(
@@ -52,7 +52,7 @@ chain_type = st.sidebar.radio(
 
 # Create Chain
 if chain_type == "LLMChain":
-    chain, memory = get_llm_chain(system_prompt)
+    chain, memory = get_dgraph_chain(system_prompt)
 else:
     chain, memory = get_expression_chain(system_prompt)
 
@@ -94,20 +94,52 @@ if st.session_state.trace_link:
 
 if prompt := st.chat_input(placeholder="Ask me a question!"):
     st.chat_message("user").write(prompt)
+    prefix = "You are a chatbot tasked with helping an Oil Company explore data and identify and remediate issues" \
+         "I've provided the graphql schema as well as an example query that shows you how to use all the filters with placeholder values $nameOfRig, $nameOfIssue, and $nameOfEquipment" \
+         " Remember to only use a filter on its corresponding type. For example, dont try to filter for issues on Equipment, but on issues  " \
+         "dont use any ordering in the graphql query" 
+    graphql_fields_all_filters = """
+query  {
+  queryOilRig(filter: {name: {eq: "$nameOfRig"}})  {
+    name
+    issues(filter: {name: {anyoftext: "$nameOfIssue"}}) {
+      id
+      name
+      description
+      solution
+      similarIssues {
+        name
+        description
+        score
+        solution
+    }
+    }
+    equipment(filter: {name: {anyofterms: "$nameOfEquipment"}}) {
+      name
+    }
+  }
+}"""
+    augmented_prompt = prefix + " "+ prompt + " " + graphql_fields_all_filters + "Do not include ``` in the Action Input as this will cause an error. it should start with query {"
+
     with st.chat_message("assistant", avatar="🦜"):
         message_placeholder = st.empty()
         full_response = ""
         if chain_type == "LLMChain":
+            scratchpad = "" # populated during agent execution
             message_placeholder.markdown("thinking...")
-            full_response = chain.invoke({"input": prompt}, config=runnable_config)[
-                "text"
-            ]
+            print("******PROMPT")
+            print(prompt)
+            print("*******RunnableConfig*")
+            print(runnable_config)
+            full_response = chain.invoke(augmented_prompt, config=runnable_config)
         else:
             for chunk in chain.stream({"input": prompt}, config=runnable_config):
                 full_response += chunk.content
                 message_placeholder.markdown(full_response + "▌")
-        message_placeholder.markdown(full_response)
-        memory.save_context({"input": prompt}, {"output": full_response})
+        message_placeholder.markdown(full_response['output'])
+        print("************full_response")
+        print(full_response)
+        memory.save_context({"input": full_response['input']}, {"output": full_response['output']})
         st.session_state.messages = memory.buffer
         # The run collector will store all the runs in order. We'll just take the root and then
         # reset the list for next interaction.
