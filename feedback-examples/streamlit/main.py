@@ -33,7 +33,7 @@ if st.sidebar.button("Clear message history"):
     st.session_state.messages = []
 
 # Add a button to choose between llmchain and expression chain
-_DEFAULT_SYSTEM_PROMPT = (""" Do not include \"```graphql\" in the Action Input
+_DEFAULT_SYSTEM_PROMPT = (""" 
 """
 )
 
@@ -68,13 +68,16 @@ def _get_openai_type(msg):
     return msg.type
 
 
-for msg in st.session_state.messages:
-    streamlit_type = _get_openai_type(msg)
-    avatar = "🦜" if streamlit_type == "assistant" else None
-    with st.chat_message(streamlit_type, avatar=avatar):
-        st.markdown(msg.content)
-    # Re-hydrate memory on app rerun
-    memory.chat_memory.add_message(msg)
+# for msg in st.session_state.messages:
+#     print("Message type:", type(msg))
+#     print("Message content:", msg)
+
+#     streamlit_type = _get_openai_type(msg)
+#     avatar = "🦜" if streamlit_type == "assistant" else None
+#     with st.chat_message(streamlit_type, avatar=avatar):
+#         st.markdown(msg.content)
+#     # Re-hydrate memory on app rerun
+#     memory.chat_memory.add_message(msg)
 
 
 def send_feedback(run_id, score):
