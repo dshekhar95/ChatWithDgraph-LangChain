@@ -6,16 +6,141 @@ from langchain.schema.runnable import RunnableConfig
 from langsmith import Client
 from expression_chain import get_expression_chain
 from vanilla_chain import get_llm_chain
+from text2GraphQLChain import get_dgraph_chain
 
+from PIL import Image
+
+image = Image.open("img/dgraph_bw_icon.png")
 
 client = Client()
 
 st.set_page_config(
     page_title="Chat LangSmith",
-    page_icon="🦜",
+    page_icon=image,
     layout="wide",
 )
-"# Chat🦜🛠️"
+
+st.markdown(
+    """
+    <style>
+        .css-1avcm0n {
+            background-color: #23212a;
+        }
+        
+        .css-ve1keh.e1f1d6gn0 {
+            display: flex;
+            background-color: #ffffff;
+        }
+        
+        .css-k7vsyb e1nzilvr1 {
+            width: 50%;
+        }
+        
+        #dgraph-chat {
+            width: 100%;
+        }
+    
+        div.css-1kyxreq.e115fcil2 {
+            width: 50%; 
+            background-color: #f7c022;
+        }
+
+        div.css-6qob1r.eczjsme3 {
+            background-color: #100c19;
+        }
+        
+        div.block-container.css-z5fcl4.ea3mdgi4 {
+            background-color: #f4f4f4;
+        }
+        
+        .element-container css-txwtdl e1f1d6gn2 {
+            width: 50%;
+        }
+        
+        .element-container css-txwtdl e1f1d6gn2 {
+            width: 50%;
+        }
+        
+        div.css-qcqlej.ea3mdgi3 {
+            background-color: #f4f4f4;
+        }
+        
+        div.stChatFloatingInputContainer.css-usj992.e1d2x3se2 {
+            background-color: #f4f4f4;
+        }
+        
+        .css-1yrzt5d {
+            background-color: #f7c022;
+        }
+        
+        span.css-10trblm.e1nzilvr0 {
+            color: #100c19;
+        }
+        
+        div.css-janbn0 {
+           background-color: #ef255a;
+           margin-right: 2rem;
+        }
+        
+        div.stChatMessage.css-4oy321.eeusbqq4 {
+            background-color: #23212a;
+            border-radius: 6px;
+            margin-left: 2rem;
+        }
+        
+        .css-4oy321 {
+            padding: 1rem;
+        }
+        
+        
+        textarea.st-c0 {
+            background-color: #23212a;
+        }
+        
+        button.css-hc3laj.ef3psqc11 {
+            :hover {
+                border-color: #f7c022;
+            }
+        }
+        
+        .css-hc3laj {
+            background-color: #ef255a;
+        }
+
+        .st-d5 {
+            background-color: #ef255a;
+        }
+        
+        button.css-hc3laj.ef3psqc1:hover {
+                border-color: #f7c022;
+            }
+        }
+        
+        p {
+            :hover {
+                color: #f7c022;
+            }
+        }
+        
+        #titles-dgraph {
+            display: flex;
+            width: 100%;
+        }
+        
+        button.css-19rxjzo.ef3psqc11 {
+            
+        }
+        
+    </style>
+    <div id="titles-dgraph">
+        <h1>Dgraph Chat </h1> 
+        <img src="http://localhost:8501/media/17389ca047525a2a325878f592e8602cbbda599ff9b885bfdd51414e.png" width=100>
+    </div>
+    """,
+    unsafe_allow_html=True 
+)
+
+# "# Chat🦜🛠️"
 # Initialize State
 if "messages" not in st.session_state:
     print("Initializing message history")
@@ -32,9 +157,8 @@ if st.sidebar.button("Clear message history"):
     st.session_state.messages = []
 
 # Add a button to choose between llmchain and expression chain
-_DEFAULT_SYSTEM_PROMPT = (
-    "You are a funky parrot pal. You are not an AI. You are a parrot."
-    " You love poetry, reading, funk music, and friendship!"
+_DEFAULT_SYSTEM_PROMPT = (""" 
+"""
 )
 
 system_prompt = st.sidebar.text_area(
@@ -52,7 +176,7 @@ chain_type = st.sidebar.radio(
 
 # Create Chain
 if chain_type == "LLMChain":
-    chain, memory = get_llm_chain(system_prompt)
+    chain, memory = get_dgraph_chain(system_prompt)
 else:
     chain, memory = get_expression_chain(system_prompt)
 
@@ -68,13 +192,16 @@ def _get_openai_type(msg):
     return msg.type
 
 
-for msg in st.session_state.messages:
-    streamlit_type = _get_openai_type(msg)
-    avatar = "🦜" if streamlit_type == "assistant" else None
-    with st.chat_message(streamlit_type, avatar=avatar):
-        st.markdown(msg.content)
-    # Re-hydrate memory on app rerun
-    memory.chat_memory.add_message(msg)
+# for msg in st.session_state.messages:
+#     print("Message type:", type(msg))
+#     print("Message content:", msg)
+
+#     streamlit_type = _get_openai_type(msg)
+#     avatar = "🦜" if streamlit_type == "assistant" else None
+#     with st.chat_message(streamlit_type, avatar=avatar):
+#         st.markdown(msg.content)
+#     # Re-hydrate memory on app rerun
+#     memory.chat_memory.add_message(msg)
 
 
 def send_feedback(run_id, score):
@@ -94,20 +221,52 @@ if st.session_state.trace_link:
 
 if prompt := st.chat_input(placeholder="Ask me a question!"):
     st.chat_message("user").write(prompt)
+    prefix = "You are a chatbot tasked with helping an Oil Company explore data and identify and remediate issues" \
+         "I've provided the graphql schema as well as an example query that shows you how to use all the filters with placeholder values $nameOfRig, $nameOfIssue, and $nameOfEquipment" \
+         " Remember to only use a filter on its corresponding type. For example, dont try to filter for issues on Equipment, but on issues  " \
+         "dont use any ordering in the graphql query" 
+    graphql_fields_all_filters = """
+query  {
+  queryOilRig(filter: {name: {eq: "$nameOfRig"}})  {
+    name
+    issues(filter: {name: {anyoftext: "$nameOfIssue"}}) {
+      id
+      name
+      description
+      solution
+      similarIssues {
+        name
+        description
+        score
+        solution
+    }
+    }
+    equipment(filter: {name: {anyofterms: "$nameOfEquipment"}}) {
+      name
+    }
+  }
+}"""
+    augmented_prompt = prefix + " "+ prompt + "Please do not include ``` in the Action Input as this will cause the query to error. " + graphql_fields_all_filters + "Do not include ``` in the Action Input as this will cause an error. it should start with query {"
+
     with st.chat_message("assistant", avatar="🦜"):
         message_placeholder = st.empty()
         full_response = ""
         if chain_type == "LLMChain":
+            scratchpad = "" # populated during agent execution
             message_placeholder.markdown("thinking...")
-            full_response = chain.invoke({"input": prompt}, config=runnable_config)[
-                "text"
-            ]
+            print("******PROMPT")
+            print(prompt)
+            print("*******RunnableConfig*")
+            print(runnable_config)
+            full_response = chain.invoke(augmented_prompt, config=runnable_config)
         else:
             for chunk in chain.stream({"input": prompt}, config=runnable_config):
                 full_response += chunk.content
                 message_placeholder.markdown(full_response + "▌")
-        message_placeholder.markdown(full_response)
-        memory.save_context({"input": prompt}, {"output": full_response})
+        message_placeholder.markdown(full_response['output'])
+        print("************full_response")
+        print(full_response)
+        memory.save_context({"input": full_response['input']}, {"output": full_response['output']})
         st.session_state.messages = memory.buffer
         # The run collector will store all the runs in order. We'll just take the root and then
         # reset the list for next interaction.
