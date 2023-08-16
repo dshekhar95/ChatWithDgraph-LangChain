@@ -122,7 +122,7 @@ query  {
     }
   }
 }"""
-    augmented_prompt = prefix + " "+ prompt + " " + graphql_fields_all_filters + "Do not include ``` in the Action Input as this will cause an error. it should start with query {"
+    augmented_prompt = prefix + " "+ prompt + "Please do not include ``` in the Action Input as this will cause the query to error. " + graphql_fields_all_filters + "Do not include ``` in the Action Input as this will cause an error. it should start with query {"
 
     with st.chat_message("assistant", avatar="🦜"):
         message_placeholder = st.empty()
