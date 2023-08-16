@@ -3,3 +3,4 @@ streamlit>=1.3
 langsmith>=0.0.19
 openai
 tiktoken
+image==1.5.33
