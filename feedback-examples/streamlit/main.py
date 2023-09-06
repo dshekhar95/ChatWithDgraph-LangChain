@@ -29,7 +29,7 @@ st.markdown(
         
         .css-ve1keh.e1f1d6gn0 {
             display: flex;
-            background-color: #ffffff;
+        
         }
         
         .css-k7vsyb e1nzilvr1 {
@@ -88,6 +88,10 @@ st.markdown(
             margin-left: 2rem;
         }
         
+        .css-eb3jpk.eeusbqq2 {
+            background-color: #85868a;
+        }
+        
         .css-4oy321 {
             padding: 1rem;
         }
@@ -95,12 +99,6 @@ st.markdown(
         
         textarea.st-c0 {
             background-color: #23212a;
-        }
-        
-        button.css-hc3laj.ef3psqc11 {
-            :hover {
-                border-color: #f7c022;
-            }
         }
         
         .css-hc3laj {
@@ -112,8 +110,11 @@ st.markdown(
         }
         
         button.css-hc3laj.ef3psqc1:hover {
-                border-color: #f7c022;
-            }
+            border-color: #f7c022;
+        }
+        
+        buttun.css-hc3laj.ef3psqc11:hover {
+            border-color: #f7c022;
         }
         
         p {
@@ -125,16 +126,28 @@ st.markdown(
         #titles-dgraph {
             display: flex;
             width: 100%;
+            align-items: center;
+        }
+        button.css-19rxjzo.ef3psqc11 {
+            border: 2px solid rgba(250, 250, 250, 0.2);
         }
         
-        button.css-19rxjzo.ef3psqc11 {
-            
+        .css-hc3laj.ef3psqc11:hover {
+            border-color: #f7c022;
+        }
+        
+        .css-x78sv8.e1nzilvr4:hover {
+            color: #f7c022;
+        }
+        
+        #d_logo {
+            margin-left: -2rem;
         }
         
     </style>
     <div id="titles-dgraph">
         <h1>Dgraph Chat </h1> 
-        <img src="http://localhost:8501/media/17389ca047525a2a325878f592e8602cbbda599ff9b885bfdd51414e.png" width=100>
+        <img id="d_logo" src="http://localhost:8501/media/17389ca047525a2a325878f592e8602cbbda599ff9b885bfdd51414e.png" width=50 height=50>
     </div>
     """,
     unsafe_allow_html=True 
@@ -249,7 +262,7 @@ query  {
 }"""
     prompt = prompt + "Please do not include ``` in the Action Input as this will cause the query to error. it should start with query { " + graphql_fields_all_filters + "Do not include ``` in the Action Input as this will cause an error. it should start with query {"
 
-    with st.chat_message("assistant", avatar="🦜"):
+    with st.chat_message("assistant", avatar="🤖"):
         message_placeholder = st.empty()
         full_response = ""
         if chain_type == "LLMChain":
