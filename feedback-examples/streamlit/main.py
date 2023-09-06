@@ -192,16 +192,17 @@ def _get_openai_type(msg):
     return msg.type
 
 
-# for msg in st.session_state.messages:
-#     print("Message type:", type(msg))
-#     print("Message content:", msg)
+for msg in st.session_state.messages:
+    print("all messages,",st.session_state.messages )
+    print("Message type:", type(msg))
+    print("Message content:", msg)
 
-#     streamlit_type = _get_openai_type(msg)
-#     avatar = "🦜" if streamlit_type == "assistant" else None
-#     with st.chat_message(streamlit_type, avatar=avatar):
-#         st.markdown(msg.content)
-#     # Re-hydrate memory on app rerun
-#     memory.chat_memory.add_message(msg)
+    streamlit_type = _get_openai_type(msg)
+    avatar = "🦜" if streamlit_type == "assistant" else None
+    with st.chat_message(streamlit_type, avatar=avatar):
+        st.markdown(msg.content)
+    # Re-hydrate memory on app rerun
+    memory.chat_memory.add_message(msg)
 
 
 def send_feedback(run_id, score):
@@ -221,10 +222,10 @@ if st.session_state.trace_link:
 
 if prompt := st.chat_input(placeholder="Ask me a question!"):
     st.chat_message("user").write(prompt)
-    prefix = "You are a chatbot tasked with helping an Oil Company explore data and identify and remediate issues" \
-         "I've provided the graphql schema as well as an example query that shows you how to use all the filters with placeholder values $nameOfRig, $nameOfIssue, and $nameOfEquipment" \
-         " Remember to only use a filter on its corresponding type. For example, dont try to filter for issues on Equipment, but on issues  " \
-         "dont use any ordering in the graphql query" 
+#     prefix = "You are a chatbot tasked with helping an Oil Company explore data and identify and remediate issues" \
+#          "I've provided the graphql schema as well as an example query that shows you how to use all the filters with placeholder values $nameOfRig, $nameOfIssue, and $nameOfEquipment" \
+#          " Remember to only use a filter on its corresponding type. For example, dont try to filter for issues on Equipment, but on issues  " \
+#          "dont use any ordering in the graphql query" 
     graphql_fields_all_filters = """
 query  {
   queryOilRig(filter: {name: {eq: "$nameOfRig"}})  {
@@ -246,27 +247,34 @@ query  {
     }
   }
 }"""
-    augmented_prompt = prefix + " "+ prompt + "Please do not include ``` in the Action Input as this will cause the query to error. " + graphql_fields_all_filters + "Do not include ``` in the Action Input as this will cause an error. it should start with query {"
+    prompt = prompt + "Please do not include ``` in the Action Input as this will cause the query to error. it should start with query { " + graphql_fields_all_filters + "Do not include ``` in the Action Input as this will cause an error. it should start with query {"
 
     with st.chat_message("assistant", avatar="🦜"):
         message_placeholder = st.empty()
         full_response = ""
         if chain_type == "LLMChain":
+            
             scratchpad = "" # populated during agent execution
             message_placeholder.markdown("thinking...")
             print("******PROMPT")
             print(prompt)
             print("*******RunnableConfig*")
             print(runnable_config)
-            full_response = chain.invoke(augmented_prompt, config=runnable_config)
+            full_response = chain.invoke(prompt+graphql_fields_all_filters, config=runnable_config)
+            message_placeholder.markdown(full_response['output'])
+            print("********INPUT")
+            print(full_response['input'])
+            memory.save_context({"input": full_response['input']}, {"output": full_response['output']})
+
         else:
             for chunk in chain.stream({"input": prompt}, config=runnable_config):
                 full_response += chunk.content
                 message_placeholder.markdown(full_response + "▌")
-        message_placeholder.markdown(full_response['output'])
+            memory.save_context({"input": prompt}, {"output": full_response})
+
+        
         print("************full_response")
         print(full_response)
-        memory.save_context({"input": full_response['input']}, {"output": full_response['output']})
         st.session_state.messages = memory.buffer
         # The run collector will store all the runs in order. We'll just take the root and then
         # reset the list for next interaction.

@@ -1,10 +1,15 @@
 from datetime import datetime
 from typing import Tuple
-
+import json
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.schema.runnable import Runnable, RunnableMap
+config_file = "config-local.json"  # Name of the user-specific configuration file
+with open(config_file, "r") as f:
+    config = json.load(f)
+
+OpenAIKey = config["OpenAIKey"]# the host or IP addr where your Dgraph alpha service is running
 
 
 def get_expression_chain(
@@ -29,7 +34,7 @@ def get_expression_chain(
             ("human", "{input}"),
         ]
     )
-    llm = ChatOpenAI(temperature=0.7)
+    llm = ChatOpenAI(temperature=0.7,openai_api_key=OpenAIKey)
     chain = ingress | prompt | llm
     return chain, memory
 

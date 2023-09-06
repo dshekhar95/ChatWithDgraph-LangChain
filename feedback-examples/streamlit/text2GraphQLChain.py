@@ -67,19 +67,41 @@ print("graphql client connections/objects established")
 def get_dgraph_chain(
     system_prompt: str,
 ) -> Tuple[LLMChain, ConversationBufferMemory]:
+    memory = ConversationBufferMemory(return_messages=True, memory_key="chat_history")
+
     """Return a basic LLMChain with memory."""
     prefix = "You are a chatbot tasked with helping an Oil Company explore data and identify and remediate issues" \
          "I've provided the graphql schema as well as an example query that shows you how to use all the filters with placeholder values $nameOfRig, $nameOfIssue, and $nameOfEquipment" \
          " Remember to only use a filter on its corresponding type. For example, dont try to filter for issues on Equipment, but on issues  " \
          "dont use any ordering in the graphql query" 
-         
+    graphql_fields_all_filters = """
+query  {
+  queryOilRig(filter: {name: {eq: "$nameOfRig"} })  {
+    name
+    issues(filter: {name: {anyoftext: "$nameOfIssue"} }) {
+      id
+      name
+      description
+      solution
+      similarIssues {
+        name
+        description
+        score
+        solution
+    }
+    }
+    equipment(filter: {name: {anyofterms: "$nameOfEquipment"}}) {
+      name
+    }
+  }
+}"""     
     suffix = """
 
     {chat_history}
     Question: {input}
     {agent_scratchpad}
     """
-    gpt4LLM = ChatOpenAI(temperature=0,model_name='gpt-4')
+    gpt4LLM = ChatOpenAI(temperature=0,model_name='gpt-4', openai_api_key=OpenAIKey)
 
     tools = load_tools(
         ["graphql"],
@@ -93,7 +115,16 @@ def get_dgraph_chain(
         suffix=suffix,
         input_variables=["input", "chat_history", "agent_scratchpad"],
     )
-    memory = ConversationBufferMemory(memory_key="chat_history")
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                system_prompt + "\nIt's currently {time}.",
+            ),
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("human", "{input}"),
+        ]
+    ).partial(time=lambda: str(datetime.now()))
 
 
     chain = LLMChain(prompt=zsaprompt, llm=gpt4LLM)
